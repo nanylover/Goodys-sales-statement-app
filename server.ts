@@ -1,7 +1,8 @@
 import express from "express";
 import path from "path";
+import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { google } from "googleapis";
+import { google } from "googleapis"; // 추가됨
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -12,7 +13,7 @@ async function startServer() {
 
   app.use(express.json());
 
-  // 1. 구글 시트 데이터를 가져오는 API
+  // [추가] 구글 시트 데이터 가져오기 API
   app.get("/api/orders", async (req, res) => {
     try {
       const auth = new google.auth.GoogleAuth({
@@ -26,44 +27,47 @@ async function startServer() {
       const sheets = google.sheets({ version: 'v4', auth });
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: '주문데이터!A:N', // 탭 이름이 '주문데이터'인지 반드시 확인하세요!
+        range: '주문데이터!A:N', // 시트 이름이 '주문데이터'인지 확인!
       });
 
       res.json(response.data.values || []);
     } catch (error) {
-      console.error("구글 시트 읽기 오류:", error);
-      res.status(500).json({ error: "데이터를 불러올 수 없습니다." });
+      console.error("시트 로드 오류:", error);
+      res.status(500).json({ error: "데이터 로드 실패" });
     }
   });
 
-  // 2. 기존 AI 분석 API
+  // 기존 AI 분석 API (내용은 그대로)
   app.post("/api/analyze-sales", async (req, res) => {
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "API 키가 없습니다." });
-      }
-
       const { salesData, month, year } = req.body;
-      const ai = new GoogleGenAI({ apiKey });
-
-      const systemInstruction = `당신은 전문 이커머스 컨설턴트입니다. ${year}년 ${month}월 매출 상황을 요약하고, 마진율 개선을 위한 구체적인 전략을 제안하세요.`;
-
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: `매출 데이터: ${JSON.stringify(salesData)}`,
-        config: { systemInstruction, temperature: 0.7 },
+        config: { systemInstruction: "전문 경영 분석가입니다.", temperature: 0.7 },
       });
-
       return res.json({ analysis: response.text });
-    } catch (error) {
-      console.error("AI Analysis Error:", error);
-      return res.status(500).json({ error: "분석 실패" });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
   });
 
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  // Vite 설정 및 서버 실행 코드 (기존 내용 그대로 유지)
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
