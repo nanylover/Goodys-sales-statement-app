@@ -1,94 +1,51 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  Calculator, Plus, Sparkles, Download, ChevronLeft, ChevronRight,
-  ShoppingBag, Info, Sun, Moon, Save, GripVertical, Copy,
-} from "lucide-react";
-import { OrderRecord, calculateGrossRevenue, calculateNetProfit } from "./types";
-import { INITIAL_RECORDS, formatWonValueOnly, generateRandomId, generateOrderNumber } from "./utils";
-import { EditableCell } from "./components/EditableCell";
-import { AnalysisModal } from "./components/AnalysisModal";
+// ... (기존 import들 동일) ...
+import { OrderRecord } from "./types";
+import { INITIAL_RECORDS, generateRandomId } from "./utils";
 
 export default function App() {
-  const [theme, setTheme] = useState<"light" | "dark">(() => (localStorage.getItem("ecommerce_margin_theme") as "light" | "dark") || "light");
   const [records, setRecords] = useState<OrderRecord[]>([]);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number>(6);
-  const [selectedDayFilter, setSelectedDayFilter] = useState<string>("ALL");
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
- // App.tsx 파일
-useEffect(() => {
-  fetch('/api/orders')
-    .then(res => res.json())
-    .then((data: any[][]) => {
-      // 1. 가져온 데이터가 빈 배열이면 무시
-      if (data && data.length > 0) {
-        // 2. 구글 시트 데이터(2차원 배열)를 앱에서 쓰는 형태(객체)로 변환
-        const formattedRecords = data.map((row) => ({
-          id: generateRandomId(),
-          buyerName: row[0] || "",
-          orderDate: row[1] || "",
-          orderNumber: row[2] || "",
-          productName: row[3] || "",
-          saleAmount: Number(row[4]) || 0,
-          shippingRevenue: Number(row[5]) || 0,
-          productCost: Number(row[6]) || 0,
-          shippingExpense: Number(row[7]) || 0,
-          adSpend: Number(row[8]) || 0,
-          commissionFee: Number(row[9]) || 0,
-          linkedFee: Number(row[10]) || 0,
-          discountAmount: Number(row[11]) || 0,
-          otherExpenses: Number(row[12]) || 0,
-        }));
-        setRecords(formattedRecords);
-      }
-    })
-    .catch(err => console.error("데이터 연동 실패:", err));
-}, []);
-
-  // 테마 및 기타 로직은 유지...
   useEffect(() => {
-    localStorage.setItem("ecommerce_margin_theme", theme);
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
+    async function fetchData() {
+      try {
+        const response = await fetch('/api/orders');
+        const data = await response.json();
+        
+        console.log("서버에서 받은 원본 데이터:", data); // F12 콘솔에서 이 로그를 반드시 확인하세요!
 
-  const handleUpdateRecord = (id: string, field: keyof OrderRecord, value: any) => {
-    setRecords(prev => prev.map(r => r.id !== id ? r : { ...r, [field]: value }));
-  };
+        if (Array.isArray(data) && data.length > 0) {
+          // 데이터가 헤더(첫 줄)를 포함하고 있다면 slice(1)로 제거
+          const rows = data[0][0] === "구매자명" ? data.slice(1) : data;
+          
+          const formatted = rows.map((row: any[]) => ({
+            id: generateRandomId(),
+            buyerName: row[0] || "",
+            orderDate: row[1] || "",
+            orderNumber: row[2] || "",
+            productName: row[3] || "",
+            saleAmount: Number(row[4] || 0),
+            shippingRevenue: Number(row[5] || 0),
+            productCost: Number(row[6] || 0),
+            shippingExpense: Number(row[7] || 0),
+            adSpend: Number(row[8] || 0),
+            commissionFee: Number(row[9] || 0),
+            linkedFee: Number(row[10] || 0),
+            discountAmount: Number(row[11] || 0),
+            otherExpenses: Number(row[12] || 0),
+          }));
+          
+          setRecords(formatted);
+        } else {
+          console.warn("데이터가 비어있거나 형식 오류입니다.");
+          setRecords(INITIAL_RECORDS); // 데이터 없으면 샘플이라도 보여줌
+        }
+      } catch (err) {
+        console.error("데이터 로드 실패:", err);
+      }
+    }
+    fetchData();
+  }, []);
 
-  const displayedRecords = useMemo(() => {
-    return records.filter(r => {
-      if (!r.orderDate) return false;
-      const parts = r.orderDate.split("-");
-      const y = parseInt(parts[0], 10) + 2000;
-      const m = parseInt(parts[1], 10);
-      return y === selectedYear && m === selectedMonth;
-    });
-  }, [records, selectedYear, selectedMonth]);
-
-  const totals = useMemo(() => {
-    return displayedRecords.reduce((acc, r) => ({
-      salesAmtSum: acc.salesAmtSum + (r.saleAmount || 0),
-      productCostSum: acc.productCostSum + (r.productCost || 0),
-      shippingExpSum: acc.shippingExpSum + (r.shippingExpense || 0),
-      grossRevenueSum: acc.grossRevenueSum + calculateGrossRevenue(r),
-      netProfitSum: acc.netProfitSum + calculateNetProfit(r),
-    }), { salesAmtSum: 0, productCostSum: 0, shippingExpSum: 0, grossRevenueSum: 0, netProfitSum: 0 });
-  }, [displayedRecords]);
-
-  // (아래 렌더링 부분은 기존과 동일하게 유지하시면 됩니다. 
-  // 위 useEffect와 setRecords 변환 로직이 핵심입니다.)
-  
-  return (
-    // ... 기존 return JSX 코드 그대로 사용 ...
-  );
+  // ... (이후 렌더링 코드 동일) ...
 }
