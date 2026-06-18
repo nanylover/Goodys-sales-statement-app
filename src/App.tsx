@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useMemo } from "react";
-// ... (기존 import들 동일) ...
-import { OrderRecord } from "./types";
-import { INITIAL_RECORDS, generateRandomId } from "./utils";
+// ... (기존 import문 동일하게 유지)
 
 export default function App() {
   const [records, setRecords] = useState<OrderRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // 로딩 상태 추가
 
   useEffect(() => {
-    async function fetchData() {
+    async function loadData() {
+      setIsLoading(true);
       try {
         const response = await fetch('/api/orders');
-        const data = await response.json();
+        if (!response.ok) throw new Error(`서버 에러: ${response.status}`);
         
-        console.log("서버에서 받은 원본 데이터:", data); // F12 콘솔에서 이 로그를 반드시 확인하세요!
+        const data = await response.json();
+        console.log("서버에서 받은 원본 데이터:", data); // F12 콘솔창에서 꼭 확인하세요!
 
         if (Array.isArray(data) && data.length > 0) {
-          // 데이터가 헤더(첫 줄)를 포함하고 있다면 slice(1)로 제거
+          // 데이터가 헤더(첫 줄)를 포함하고 있다면 slice(1)로 제거 후 변환
           const rows = data[0][0] === "구매자명" ? data.slice(1) : data;
           
           const formatted = rows.map((row: any[]) => ({
@@ -34,18 +35,20 @@ export default function App() {
             discountAmount: Number(row[11] || 0),
             otherExpenses: Number(row[12] || 0),
           }));
-          
           setRecords(formatted);
         } else {
-          console.warn("데이터가 비어있거나 형식 오류입니다.");
-          setRecords(INITIAL_RECORDS); // 데이터 없으면 샘플이라도 보여줌
+          console.warn("데이터가 비어있습니다. 샘플 데이터를 사용합니다.");
+          setRecords(INITIAL_RECORDS);
         }
       } catch (err) {
-        console.error("데이터 로드 실패:", err);
+        console.error("데이터 불러오기 실패:", err);
+        setRecords(INITIAL_RECORDS); // 에러나면 샘플이라도 보여줌
+      } finally {
+        setIsLoading(false);
       }
     }
-    fetchData();
+    loadData();
   }, []);
 
-  // ... (이후 렌더링 코드 동일) ...
+  // ... (나머지 JSX 렌더링 코드 동일)
 }
