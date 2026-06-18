@@ -16,7 +16,15 @@ async function getSheetData(sheetId: string) {
   });
   await doc.loadInfo();
   const sheet = doc.sheetsByIndex[0];
-  return await sheet.getRows();
+  const rows = await sheet.getRows();
+  
+  // 데이터 확인용 로그 (Vercel 로그에서 확인 가능)
+  console.log(`불러온 행 개수: ${rows.length}`);
+  if (rows.length > 0) {
+    console.log("첫 번째 행 샘플:", JSON.stringify(rows[0]._rawData));
+  }
+  
+  return rows;
 }
 
 async function startServer() {
@@ -32,25 +40,29 @@ async function startServer() {
       if (!sheetId) return res.status(500).json({ error: "GOOGLE_SHEET_ID가 설정되지 않았습니다." });
       
       const rows = await getSheetData(sheetId);
+      
+      // 시트의 각 행을 JSON 객체로 변환
       const data = rows.map(row => ({
-        buyerName: row.buyerName,
-        productName: row.productName,
-        saleAmount: row.saleAmount,
-        productCost: row.productCost,
-        shippingRevenue: row.shippingRevenue,
-        shippingExpense: row.shippingExpense,
-        adSpend: row.adSpend,
-        commissionFee: row.commissionFee,
-        linkedFee: row.linkedFee,
-        discountAmount: row.discountAmount,
-        otherExpenses: row.otherExpenses,
-        grossRevenue: row.grossRevenue,
-        netProfit: row.netProfit
+        // 시트의 헤더 이름과 아래 키 값이 일치해야 합니다.
+        buyerName: row.buyerName || "",
+        productName: row.productName || "",
+        saleAmount: row.saleAmount || 0,
+        productCost: row.productCost || 0,
+        shippingRevenue: row.shippingRevenue || 0,
+        shippingExpense: row.shippingExpense || 0,
+        adSpend: row.adSpend || 0,
+        commissionFee: row.commissionFee || 0,
+        linkedFee: row.linkedFee || 0,
+        discountAmount: row.discountAmount || 0,
+        otherExpenses: row.otherExpenses || 0,
+        grossRevenue: row.grossRevenue || 0,
+        netProfit: row.netProfit || 0
       }));
+      
       res.json(data);
     } catch (error: any) {
       console.error("Sheet Error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "데이터를 불러오는 중 오류가 발생했습니다: " + error.message });
     }
   });
 
