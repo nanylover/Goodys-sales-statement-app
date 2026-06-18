@@ -1,30 +1,15 @@
-// api/get-sheet-data.js
-import { GoogleSpreadsheet } from 'google-spreadsheet';
+// server.ts (간소화)
+import express from "express";
+import path from "path";
 
-export default async function handler(req, res) {
-  try {
-    const sheetId = process.env.GOOGLE_SHEET_ID;
-    const doc = new GoogleSpreadsheet(sheetId);
-    
-    await doc.useServiceAccountAuth({
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    });
+const app = express();
+const distPath = path.join(process.cwd(), 'dist');
 
-    await doc.loadInfo();
-    const sheet = doc.sheetsByIndex[0];
-    const rows = await sheet.getRows();
-    
-    const data = rows.map(row => ({
-      buyerName: row.buyerName || "",
-      productName: row.productName || "",
-      saleAmount: row.saleAmount || 0,
-      grossRevenue: row.grossRevenue || 0,
-      netProfit: row.netProfit || 0
-    }));
+app.use(express.static(distPath));
 
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Static server running on port ${port}`));
