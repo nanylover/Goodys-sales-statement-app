@@ -1,4 +1,4 @@
-// 1. 상단에 추가
+
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 
 // 2. 시트 데이터 가져오는 예시 함수 (서버 내부에 구현)
