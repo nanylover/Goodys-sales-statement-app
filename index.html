@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GOODY's매출표</title>
+    <script>
+      // Suppress annoying and benign WebSocket/HMR connection errors that are expected in the sandboxed preview environment.
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason) {
+          const reasonStr = String(event.reason.message || event.reason);
+          if (reasonStr.toLowerCase().includes('websocket') || reasonStr.toLowerCase().includes('hmr')) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }
+      });
+      window.addEventListener('error', function(event) {
+        if (event.message) {
+          const msgStr = String(event.message);
+          if (msgStr.toLowerCase().includes('websocket') || msgStr.toLowerCase().includes('hmr')) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

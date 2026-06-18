@@ -1,0 +1,6 @@
+{
+  "name": "GOODY's E-Commerce Sales Margin Calculator",
+  "description": "An interactive spreadsheet-like calculator for tracking sales, shipping revenues, costs, fees, and net profit with AI business analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
