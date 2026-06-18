@@ -25,12 +25,14 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
-  // 서버에서 데이터 가져오기
-  useEffect(() => {
-    fetch('/api/orders')
-      .then(res => res.json())
-      .then((data: any[][]) => {
-        // 구글 시트 2차원 배열 데이터를 OrderRecord 객체로 변환
+ // App.tsx 파일
+useEffect(() => {
+  fetch('/api/orders')
+    .then(res => res.json())
+    .then((data: any[][]) => {
+      // 1. 가져온 데이터가 빈 배열이면 무시
+      if (data && data.length > 0) {
+        // 2. 구글 시트 데이터(2차원 배열)를 앱에서 쓰는 형태(객체)로 변환
         const formattedRecords = data.map((row) => ({
           id: generateRandomId(),
           buyerName: row[0] || "",
@@ -47,13 +49,11 @@ export default function App() {
           discountAmount: Number(row[11]) || 0,
           otherExpenses: Number(row[12]) || 0,
         }));
-        setRecords(formattedRecords.length > 0 ? formattedRecords : INITIAL_RECORDS);
-      })
-      .catch(err => {
-        console.error("데이터 로드 실패:", err);
-        setRecords(INITIAL_RECORDS);
-      });
-  }, []);
+        setRecords(formattedRecords);
+      }
+    })
+    .catch(err => console.error("데이터 연동 실패:", err));
+}, []);
 
   // 테마 및 기타 로직은 유지...
   useEffect(() => {
