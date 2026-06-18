@@ -13,45 +13,40 @@ async function startServer() {
 
   app.use(express.json());
 
-  // 1. 구글 시트 데이터 로드 API
+  // 구글 시트 데이터 로드 API
   app.get("/api/orders", async (req, res) => {
     try {
       if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID) {
-        throw new Error("환경 변수가 설정되지 않았습니다.");
+        throw new Error("환경 변수 누락");
       }
-
       const auth = new google.auth.GoogleAuth({
         credentials: {
           client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
         },
         scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
       });
-
       const sheets = google.sheets({ version: 'v4', auth });
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
         range: '주문데이터!A:N',
       });
-
-      // 시트 데이터가 없으면 빈 배열 반환
       res.json(response.data.values || []);
-    } catch (error) {
-      console.error("데이터 로드 오류:", error);
-      res.status(500).json({ error: "데이터를 불러올 수 없습니다." });
+    } catch (error: any) {
+      console.error("데이터 로드 오류:", error.message);
+      res.status(500).json({ error: error.message });
     }
   });
 
-  // 2. AI 분석 API
+  // AI 분석 API
   app.post("/api/analyze-sales", async (req, res) => {
     try {
       const { salesData, month, year } = req.body;
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-      
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: `매출 데이터: ${JSON.stringify(salesData)}`,
-        config: { systemInstruction: "전문 이커머스 경영 분석 컨설턴트입니다.", temperature: 0.7 },
+        config: { systemInstruction: "전문 이커머스 컨설턴트입니다.", temperature: 0.7 },
       });
       return res.json({ analysis: response.text });
     } catch (error: any) {
@@ -59,7 +54,6 @@ async function startServer() {
     }
   });
 
-  // 3. 정적 파일 서빙 및 Vite 미들웨어
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
@@ -69,9 +63,7 @@ async function startServer() {
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-  });
+  app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
 }
 
 startServer();
