@@ -1,3 +1,21 @@
+// 1. 상단에 추가
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+
+// 2. 시트 데이터 가져오는 예시 함수 (서버 내부에 구현)
+async function getSheetData(sheetId: string) {
+  const doc = new GoogleSpreadsheet(sheetId);
+  
+  // Vercel 환경 변수에서 가져온 값들을 사용합니다.
+  await doc.useServiceAccountAuth({
+    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
+    private_key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+  });
+  
+  await doc.loadInfo();
+  const sheet = doc.sheetsByIndex[0]; // 첫 번째 시트
+  return await sheet.getRows();
+}
+
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
