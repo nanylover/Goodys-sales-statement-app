@@ -13,9 +13,13 @@ async function startServer() {
 
   app.use(express.json());
 
-  // [추가] 구글 시트 데이터를 가져오는 API
+  // 1. 구글 시트 데이터 로드 API
   app.get("/api/orders", async (req, res) => {
     try {
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID) {
+        throw new Error("환경 변수가 설정되지 않았습니다.");
+      }
+
       const auth = new google.auth.GoogleAuth({
         credentials: {
           client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -30,6 +34,7 @@ async function startServer() {
         range: '주문데이터!A:N',
       });
 
+      // 시트 데이터가 없으면 빈 배열 반환
       res.json(response.data.values || []);
     } catch (error) {
       console.error("데이터 로드 오류:", error);
@@ -37,15 +42,16 @@ async function startServer() {
     }
   });
 
-  // [기존] AI 분석 API
+  // 2. AI 분석 API
   app.post("/api/analyze-sales", async (req, res) => {
     try {
       const { salesData, month, year } = req.body;
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+      
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: `매출 데이터: ${JSON.stringify(salesData)}`,
-        config: { systemInstruction: "전문 이커머스 컨설턴트입니다.", temperature: 0.7 },
+        config: { systemInstruction: "전문 이커머스 경영 분석 컨설턴트입니다.", temperature: 0.7 },
       });
       return res.json({ analysis: response.text });
     } catch (error: any) {
@@ -53,7 +59,7 @@ async function startServer() {
     }
   });
 
-  // 서버 실행 설정
+  // 3. 정적 파일 서빙 및 Vite 미들웨어
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
@@ -63,7 +69,9 @@ async function startServer() {
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
-  app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+  });
 }
 
 startServer();
