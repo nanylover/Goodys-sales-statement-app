@@ -12,8 +12,9 @@ async function startServer() {
   const PORT = 3000;
   app.use(express.json());
 
-  // 1. 구글 시트 데이터 로드 API
+  // 데이터 로드 API: 명시적으로 등록
   app.get("/api/orders", async (req, res) => {
+    console.log("서버가 데이터 요청을 받았습니다."); 
     try {
       const auth = new google.auth.GoogleAuth({
         credentials: {
@@ -29,36 +30,12 @@ async function startServer() {
       });
       res.json(response.data.values || []);
     } catch (error: any) {
-      console.error("데이터 로드 오류:", error.message);
+      console.error("서버 에러:", error.message);
       res.status(500).json({ error: error.message });
     }
   });
 
-  // 2. AI 분석 API
-  app.post("/api/analyze-sales", async (req, res) => {
-    try {
-      const { salesData, month, year } = req.body;
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: `매출 데이터: ${JSON.stringify(salesData)}`,
-        config: { systemInstruction: "전문 이커머스 컨설턴트입니다.", temperature: 0.7 },
-      });
-      return res.json({ analysis: response.text });
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
-    }
-  });
-
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
-  }
-
-  app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
+  // (AI 분석 및 서버 실행 설정 코드는 기존 내용 그대로 유지하세요)
+  // ... (Vite 설정 및 app.listen 등)
 }
 startServer();
