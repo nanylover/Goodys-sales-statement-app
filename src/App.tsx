@@ -1,3 +1,26 @@
+// App.tsx 상단 import 수정
+// import { INITIAL_RECORDS, ... } 에서 INITIAL_RECORDS 제외 또는 주석 처리
+
+export default function App() {
+  // 데이터 상태 초기화
+  const [records, setRecords] = useState<OrderRecord[]>([]);
+
+  // 서버에서 데이터 불러오기
+  useEffect(() => {
+    fetch('/api/orders')
+      .then(res => res.json())
+      .then(data => {
+        // 구글 시트에서 가져온 데이터(2차원 배열)를 실제 객체 형태로 변환이 필요할 수 있습니다.
+        // 데이터 구조에 맞춰 setRecords(...)를 호출하세요.
+        console.log("시트 데이터:", data);
+        setRecords(data); 
+      })
+      .catch(err => console.error("API 연동 실패:", err));
+  }, []);
+
+  // ... 나머지 기존 코드 ...
+}
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
