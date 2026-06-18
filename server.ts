@@ -15,10 +15,6 @@ async function startServer() {
   // 1. 구글 시트 데이터 로드 API
   app.get("/api/orders", async (req, res) => {
     try {
-      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID) {
-        throw new Error("환경 변수가 설정되지 않았습니다.");
-      }
-
       const auth = new google.auth.GoogleAuth({
         credentials: {
           client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -26,17 +22,15 @@ async function startServer() {
         },
         scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
       });
-
       const sheets = google.sheets({ version: 'v4', auth });
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
         range: '주문데이터!A:N',
       });
-
       res.json(response.data.values || []);
-    } catch (error) {
-      console.error("데이터 로드 오류:", error);
-      res.status(500).json({ error: "실패" });
+    } catch (error: any) {
+      console.error("데이터 로드 오류:", error.message);
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -56,7 +50,6 @@ async function startServer() {
     }
   });
 
-  // 3. 정적 파일 서빙 및 Vite 미들웨어 (이 부분이 있어야 웹 화면이 보입니다)
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
@@ -68,5 +61,4 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
 }
-
 startServer();
